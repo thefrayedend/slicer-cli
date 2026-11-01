@@ -39,7 +39,18 @@ with byte-identical G-code and unchanged print-time and filament statistics.
 
    | File | What it changes |
    |-|-|
-   | (none yet; the lean-mode `libslic3r/orcaslicer/libslic3r/GCode/GCodeProcessor.cpp` is added in a later commit) | |
+   | `libslic3r/orcaslicer/libslic3r/GCode/GCodeProcessor.cpp` | "Lean mode": the G-code processor no longer keeps one `MoveVertex` per move in `GCodeProcessorResult::moves` (nor the "actual speed" vertices inserted between them, `lines_ends`, or the original-to-final G-code line map). These exist for the desktop preview only. It keeps a running move count for the time planner's `move_id`s, the last vertex position for seam detection, and per (object, filament) bounding boxes plus max print height for `check_multi_extruder_gcode_valid`, which only ever used bounding boxes of the vertex positions (including the acceleration/deceleration points the unpatched build inserted; those are reproduced from the planner's trapezoids). The time estimate, M73 lines, print statistics, used filaments, slice warnings and the G-code bytes are untouched. Every hunk is marked `FFB lean`. Includes rewritten from `"X.hpp"` to `<libslic3r/X.hpp>` so the override compiles from its own folder. At this pin arcs are already expanded into internal G1 vertices (no `interpolation_points` field exists), so dropping the vertices covers arcs too. |
+
+   Lean mode is on by default. The environment variable `SLICER_CLI_KEEP_MOVES=1`
+   turns it off in the same binary (the upstream behaviour), which is how the two
+   are compared. The engine log says which mode is active:
+   `GCodeProcessor lean mode: on (...)` or `off (...)`.
+
+   What the fork does not change: `toolpath_outside` is never set by the
+   command-line engine (upstream sets it in the GUI preview), so the
+   `toolpath_outside_bed` event cannot fire in either mode; the G-code bed check
+   that does fire is the `gcode_check` event with flag `plate_printable_area`
+   (exit status 152), and it behaves the same in both modes.
 
 ## Releases
 
